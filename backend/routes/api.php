@@ -82,10 +82,12 @@ Route::middleware([
 |--------------------------------------------------------------------------
 */
 
-Route::get('/reports', [ReportController::class, 'index']);
-Route::get('/reports/{id}', [ReportController::class, 'show']);
-Route::put('/reports/{id}/status', [ReportController::class, 'updateStatus']);
-Route::delete('/reports/{id}', [ReportController::class, 'destroy']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/reports', [ReportController::class, 'index']);
+    Route::get('/reports/{id}', [ReportController::class, 'show']);
+    Route::put('/reports/{id}/status', [ReportController::class, 'updateStatus']);
+    Route::delete('/reports/{id}', [ReportController::class, 'destroy']);
+});
 
 
 /*
@@ -94,12 +96,14 @@ Route::delete('/reports/{id}', [ReportController::class, 'destroy']);
 |--------------------------------------------------------------------------
 */
 
-Route::get('/vendors', [VendorController::class, 'index']);
-Route::post('/vendors', [VendorController::class, 'store']);
-Route::get('/vendors/{id}', [VendorController::class, 'show']);
-Route::put('/vendors/{id}', [VendorController::class, 'update']);
-Route::put('/vendors/{id}/status', [VendorController::class, 'updateStatus']);
-Route::delete('/vendors/{id}', [VendorController::class, 'destroy']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/vendors', [VendorController::class, 'index']);
+    Route::post('/vendors', [VendorController::class, 'store']);
+    Route::get('/vendors/{id}', [VendorController::class, 'show']);
+    Route::put('/vendors/{id}', [VendorController::class, 'update']);
+    Route::put('/vendors/{id}/status', [VendorController::class, 'updateStatus']);
+    Route::delete('/vendors/{id}', [VendorController::class, 'destroy']);
+});
 
 
 /*
@@ -108,12 +112,14 @@ Route::delete('/vendors/{id}', [VendorController::class, 'destroy']);
 |--------------------------------------------------------------------------
 */
 
-Route::get('/attendance', [AttendanceController::class, 'index']);
-Route::post('/attendance', [AttendanceController::class, 'store']);
-Route::get('/attendance/{id}', [AttendanceController::class, 'show']);
-Route::put('/attendance/{id}', [AttendanceController::class, 'update']);
-Route::put('/attendance/{id}/status', [AttendanceController::class, 'updateStatus']);
-Route::delete('/attendance/{id}', [AttendanceController::class, 'destroy']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/attendance', [AttendanceController::class, 'index']);
+    Route::post('/attendance', [AttendanceController::class, 'store']);
+    Route::get('/attendance/{id}', [AttendanceController::class, 'show']);
+    Route::put('/attendance/{id}', [AttendanceController::class, 'update']);
+    Route::put('/attendance/{id}/status', [AttendanceController::class, 'updateStatus']);
+    Route::delete('/attendance/{id}', [AttendanceController::class, 'destroy']);
+});
 
 
 /*
