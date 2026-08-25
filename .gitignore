@@ -1,0 +1,17 @@
+# Repository-local tools and build output
+.vs/
+.dist/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependency directories
+node_modules/
+vendor/
+
+# Runtime databases and logs
+*.sqlite
+*.sqlite3
+*.log

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Vendor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -127,6 +128,12 @@ class VendorController extends Controller
 
         $vendor->load(['user', 'barangay']);
 
+        ActivityLog::record(
+            'vendor.created',
+            "Added vendor {$vendor->business_name} ({$vendor->vendor_code}).",
+            $vendor
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Vendor created successfully.',
@@ -225,6 +232,12 @@ class VendorController extends Controller
 
         $vendor->load(['user', 'barangay']);
 
+        ActivityLog::record(
+            'vendor.updated',
+            "Updated vendor {$vendor->business_name} ({$vendor->vendor_code}).",
+            $vendor
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Vendor updated successfully.',
@@ -265,6 +278,12 @@ class VendorController extends Controller
         $vendor->status = $request->status;
         $vendor->save();
 
+        ActivityLog::record(
+            'vendor.status_updated',
+            "Set vendor {$vendor->business_name} status to {$vendor->status}.",
+            $vendor
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Vendor status updated successfully.',
@@ -290,7 +309,13 @@ class VendorController extends Controller
             ], 404);
         }
 
+        $name = $vendor->business_name;
         $vendor->delete();
+
+        ActivityLog::record(
+            'vendor.deleted',
+            "Deleted vendor {$name}."
+        );
 
         return response()->json([
             'success' => true,

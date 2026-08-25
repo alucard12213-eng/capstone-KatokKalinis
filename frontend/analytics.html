@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Analytics - KatokKalinis</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">KatokKalinis</div>
+            <div class="sidebar-role" id="sidebar-role"></div>
+            <nav class="sidebar-nav" id="sidebar-nav"></nav>
+            <div class="sidebar-footer"><button class="btn btn-logout" onclick="logout()">Logout</button></div>
+        </aside>
+        <main class="main-content">
+            <header class="topbar"><h2>Dashboard Analytics</h2><div id="topbar-user"></div></header>
+            <section class="content">
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>Drivers</h3><div class="value" id="total-employees">...</div></div>
+                    <div class="stat-card"><h3>Contractors</h3><div class="value" id="total-contractors">...</div></div>
+                    <div class="stat-card"><h3>Vendors</h3><div class="value" id="total-vendors">...</div></div>
+                    <div class="stat-card"><h3>Reports</h3><div class="value" id="total-reports">...</div></div>
+                    <div class="stat-card"><h3>Trucks</h3><div class="value" id="total-trucks">...</div></div>
+                </div>
+                <div class="analytics-grid">
+                    <div class="card"><div class="card-header"><h3>Barangay Analytics</h3></div><div id="barangay-stats" class="analytics-list">Loading...</div></div>
+                    <div class="card"><div class="card-header"><h3>Market Compliance</h3></div><div id="market-compliance" class="analytics-list">Loading...</div></div>
+                    <div class="card"><div class="card-header"><h3>Reports by Status</h3></div><div id="report-stats" class="analytics-list">Loading...</div></div>
+                    <div class="card"><div class="card-header"><h3>Driver Attendance</h3></div><div id="driver-stats" class="analytics-list">Loading...</div></div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="js/app.js"></script>
+    <script>
+        const row = (label, value) => `<div class="analytics-row"><span>${label}</span><strong>${value}</strong></div>`;
+        async function loadAnalytics() {
+            try {
+                const data = await apiRequest('/analytics/overview');
+                const totals = data.totals || {};
+                Object.entries({ employees: 'total-employees', contractors: 'total-contractors', vendors: 'total-vendors', reports: 'total-reports', trucks: 'total-trucks' }).forEach(([key, id]) => document.getElementById(id).textContent = totals[key] ?? 0);
+                document.getElementById('barangay-stats').innerHTML = (data.barangay_stats || []).map(item => row(item.name, `${item.vendors} vendors · ${item.reports} reports`)).join('') || '<p class="empty-state">No barangay data.</p>';
+                const compliance = data.market_compliance || {};
+                document.getElementById('market-compliance').innerHTML = row('Total inspections', compliance.total_inspections ?? 0) + row('Flagged markets', compliance.flagged_markets ?? 0) + row('Review threshold', compliance.threshold ?? 60);
+                document.getElementById('report-stats').innerHTML = Object.entries(data.reports_by_status || {}).map(([label, value]) => row(label, value)).join('') || '<p class="empty-state">No report data.</p>';
+                document.getElementById('driver-stats').innerHTML = (data.employee_attendance || []).map(item => row(item.name, `${item.present} present · ${item.late} late · ${item.absent} absent`)).join('') || '<p class="empty-state">No attendance data.</p>';
+            } catch (error) {
+                document.querySelectorAll('.analytics-list').forEach(element => element.innerHTML = `<p class="empty-state">Unable to load analytics: ${error.message}</p>`);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', loadAnalytics);
+    </script>
+</body>
+</html>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Contractor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -59,6 +60,12 @@ class ContractorController extends Controller
             'status' => $request->status,
             'description' => $request->description,
         ]);
+
+        ActivityLog::record(
+            'contractor.created',
+            "Added contractor {$contractor->company_name} ({$contractor->contractor_code}).",
+            $contractor
+        );
 
         return response()->json([
             'success' => true,
@@ -132,6 +139,12 @@ class ContractorController extends Controller
             'description' => $request->description,
         ]);
 
+        ActivityLog::record(
+            'contractor.updated',
+            "Updated contractor {$contractor->company_name} ({$contractor->contractor_code}).",
+            $contractor
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Contractor updated successfully.',
@@ -153,7 +166,13 @@ class ContractorController extends Controller
             ], 404);
         }
 
+        $name = $contractor->company_name;
         $contractor->delete();
+
+        ActivityLog::record(
+            'contractor.deleted',
+            "Deleted contractor {$name}."
+        );
 
         return response()->json([
             'success' => true,

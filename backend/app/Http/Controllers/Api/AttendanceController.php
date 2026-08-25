@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Attendance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -41,7 +42,7 @@ class AttendanceController extends Controller
         */
 
         if ($request->filled('date')) {
-            $query->whereDate('date', $request->date);
+            $query->where('date', $request->date);
         }
 
         /*
@@ -98,7 +99,7 @@ class AttendanceController extends Controller
         }
 
         $existing = Attendance::where('user_id', $request->user_id)
-            ->whereDate('date', $request->date)
+            ->where('date', $request->date)
             ->first();
 
         if ($existing) {
@@ -118,6 +119,12 @@ class AttendanceController extends Controller
         ]);
 
         $attendance->load('user');
+
+        ActivityLog::record(
+            'attendance.created',
+            "Recorded attendance for {$attendance->user->name} on {$attendance->date}.",
+            $attendance
+        );
 
         return response()->json([
             'success' => true,
@@ -202,7 +209,7 @@ class AttendanceController extends Controller
             $date = $request->date ?? $attendance->date;
 
             $duplicate = Attendance::where('user_id', $userId)
-                ->whereDate('date', $date)
+                ->where('date', $date)
                 ->where('id', '!=', $attendance->id)
                 ->exists();
 
@@ -267,6 +274,12 @@ class AttendanceController extends Controller
 
         $attendance->load('user');
 
+        ActivityLog::record(
+            'attendance.status_updated',
+            "Set attendance #{$attendance->id} status to {$attendance->status}.",
+            $attendance
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Attendance status updated successfully.',
@@ -293,6 +306,11 @@ class AttendanceController extends Controller
         }
 
         $attendance->delete();
+
+        ActivityLog::record(
+            'attendance.deleted',
+            "Deleted attendance record #{$id}."
+        );
 
         return response()->json([
             'success' => true,

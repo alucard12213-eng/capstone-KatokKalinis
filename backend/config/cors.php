@@ -18,14 +18,7 @@ return [
     ],
 
     'allowed_origins' => [
-        'http://localhost:8081',
-        'http://127.0.0.1:8081',
-        'http://localhost:8082',
-        'http://127.0.0.1:8082',
-        'http://localhost:8083',
-        'http://127.0.0.1:8083',
-        'http://localhost:19006',
-        'http://127.0.0.1:19006',
+        '*',
     ],
 
     'allowed_origins_patterns' => [],
@@ -38,6 +31,9 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
+    // The admin web dashboard authenticates with a Bearer token (not
+    // cookies), so credentials are not needed and origins can stay
+    // wide open for local development (XAMPP, Live Server, file://, etc).
+    'supports_credentials' => false,
 
 ];

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\Request;
@@ -47,6 +48,13 @@ class AuthController extends Controller
         $token = $user
             ->createToken('katokkalinis-web')
             ->plainTextToken;
+
+        ActivityLog::record(
+            'auth.login',
+            "{$user->name} ({$user->email}) logged in.",
+            $user,
+            $user->id
+        );
 
         return response()->json([
             'success' => true,
@@ -195,7 +203,7 @@ class AuthController extends Controller
     {
         $user = $request->user()->load('roles');
 
-        if (!$this->isAdminUser($user)) {
+        if (!$this->canManageOwnAccount($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to access admin settings.',
@@ -229,7 +237,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (!$this->isAdminUser($user)) {
+        if (!$this->canManageOwnAccount($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to update this profile.',
@@ -289,7 +297,7 @@ class AuthController extends Controller
 {
     $user = $request->user();
 
-    if (!$this->isAdminUser($user)) {
+    if (!$this->canManageOwnAccount($user)) {
         return response()->json([
             'success' => false,
             'message' => 'You are not authorized to change this password.',
@@ -359,6 +367,13 @@ class AuthController extends Controller
                 'admin',
                 'super_admin',
             ])
+            ->exists();
+    }
+
+    private function canManageOwnAccount(User $user): bool
+    {
+        return $user->roles()
+            ->whereIn('name', ['admin', 'super_admin', 'driver', 'inspector'])
             ->exists();
     }
 }

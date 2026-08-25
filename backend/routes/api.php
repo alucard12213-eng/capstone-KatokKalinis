@@ -9,6 +9,16 @@ use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\VendorController;
 use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\ScheduleController;
+use App\Http\Controllers\Api\BarangayController;
+use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\InspectionController;
+use App\Http\Controllers\Api\TruckController;
+use App\Http\Controllers\Api\TruckLocationController;
+use App\Http\Controllers\Api\CollectionRouteController;
+use App\Http\Controllers\Api\ActivityLogController;
+use App\Http\Controllers\Api\AnalyticsController;
 
 use App\Http\Middleware\SuperAdminMiddleware;
 
@@ -73,6 +83,44 @@ Route::middleware([
     Route::put('/contracts/{id}', [ContractController::class, 'update']);
     Route::delete('/contracts/{id}', [ContractController::class, 'destroy']);
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | HISTORY LOGS FOR ACTIVITIES (Super Admin only)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/activity-logs', [ActivityLogController::class, 'index']);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Deleting a user account is Super Admin only. Viewing users and editing
+    | their permissions/roles is shared with Admin/Barangay Admin below.
+    |--------------------------------------------------------------------------
+    */
+
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| ALL USER PROFILES + EDIT PERMISSIONS
+|--------------------------------------------------------------------------
+|
+| Shared by Admin (Barangay Admin) and Super Admin: both roles need to see
+| resident/vendor/staff profiles and customize user permissions.
+|
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::put('/users/{id}/roles', [UserController::class, 'updateRoles']);
+
+    Route::get('/roles', [RoleController::class, 'index']);
 });
 
 
@@ -119,6 +167,94 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/attendance/{id}', [AttendanceController::class, 'update']);
     Route::put('/attendance/{id}/status', [AttendanceController::class, 'updateStatus']);
     Route::delete('/attendance/{id}', [AttendanceController::class, 'destroy']);
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| COLLECTION SCHEDULES
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/schedules', [ScheduleController::class, 'index']);
+    Route::post('/schedules', [ScheduleController::class, 'store']);
+    Route::get('/schedules/{id}', [ScheduleController::class, 'show']);
+    Route::put('/schedules/{id}', [ScheduleController::class, 'update']);
+    Route::delete('/schedules/{id}', [ScheduleController::class, 'destroy']);
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| BARANGAYS (read-only, used for dropdowns)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/barangays', [BarangayController::class, 'index']);
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| MARKET COMPLIANCE (INSPECTIONS)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/inspections', [InspectionController::class, 'index']);
+    Route::post('/inspections', [InspectionController::class, 'store']);
+    Route::get('/inspections/{id}', [InspectionController::class, 'show']);
+    Route::put('/inspections/{id}', [InspectionController::class, 'update']);
+    Route::put('/inspections/{id}/decision', [InspectionController::class, 'decision'])
+        ->middleware(SuperAdminMiddleware::class);
+    Route::delete('/inspections/{id}', [InspectionController::class, 'destroy']);
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| TRUCK LOCATION ANALYTICS
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/trucks', [TruckController::class, 'index']);
+    Route::post('/trucks', [TruckController::class, 'store']);
+    Route::get('/trucks/{id}', [TruckController::class, 'show']);
+    Route::put('/trucks/{id}', [TruckController::class, 'update']);
+    Route::put('/trucks/{id}/status', [TruckController::class, 'updateStatus']);
+    Route::delete('/trucks/{id}', [TruckController::class, 'destroy']);
+
+    Route::get('/trucks/{id}/locations', [TruckLocationController::class, 'index']);
+    Route::post('/trucks/{id}/locations', [TruckLocationController::class, 'store']);
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| COLLECTION ROUTES (trash collection runs / Records & Archives)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/collection-routes', [CollectionRouteController::class, 'index']);
+    Route::post('/collection-routes', [CollectionRouteController::class, 'store']);
+    Route::get('/collection-routes/{id}', [CollectionRouteController::class, 'show']);
+    Route::put('/collection-routes/{id}', [CollectionRouteController::class, 'update']);
+    Route::delete('/collection-routes/{id}', [CollectionRouteController::class, 'destroy']);
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| DASHBOARD ANALYTICS
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
 });
 
 

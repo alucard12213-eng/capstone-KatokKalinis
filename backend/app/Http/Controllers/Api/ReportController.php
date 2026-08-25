@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -127,6 +128,12 @@ class ReportController extends Controller
             'barangay:id,name',
         ]);
 
+        ActivityLog::record(
+            'report.status_updated',
+            "Set report #{$report->id} ({$report->title}) status to {$report->status}.",
+            $report
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Report updated successfully.',
@@ -152,7 +159,13 @@ class ReportController extends Controller
             ], 404);
         }
 
+        $title = $report->title;
         $report->delete();
+
+        ActivityLog::record(
+            'report.deleted',
+            "Deleted report {$title}."
+        );
 
         return response()->json([
             'success' => true,

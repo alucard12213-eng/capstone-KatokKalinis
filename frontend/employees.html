@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employees - KatokKalinis</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">KatokKalinis</div>
+            <div class="sidebar-role" id="sidebar-role"></div>
+            <nav class="sidebar-nav" id="sidebar-nav"></nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <h2>Employees</h2>
+                <div id="topbar-user"></div>
+            </header>
+            
+            <section class="content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Employee Management</h3>
+                        <button class="btn" onclick="openModal()" style="width: auto;">Add Employee</button>
+                    </div>
+                    <div id="table-body" class="record-grid">
+                        <p>Loading employees...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="form-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Add Employee</h3>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="data-form">
+                <input type="hidden" id="item-id">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="phone" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" id="address" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Date Joined</label>
+                    <input type="date" id="joined_at" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Password (Leave blank to keep current)</label>
+                    <input type="password" id="password" class="form-control">
+                </div>
+                <button type="submit" class="btn">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="records-modal" class="modal">
+        <div class="modal-content employee-record-modal">
+            <div class="modal-header">
+                <h3>Employee Records</h3>
+                <span class="close-btn" onclick="closeRecordsModal()">&times;</span>
+            </div>
+            <div id="employee-record-details" class="employee-record-details"></div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        const endpoint = '/employees';
+
+        async function loadData() {
+            const tbody = document.getElementById('table-body');
+            try {
+                const res = await apiRequest(endpoint);
+                const data = res.employees || [];
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = '<p class="empty-state">No employees found.</p>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(item => `
+                    <article class="record-card">
+                        <div class="record-avatar" aria-hidden="true">●</div>
+                        <div class="record-main"><strong>${item.name}</strong><span>Driver Account</span></div>
+                        <div class="record-meta"><span>${item.email}</span><span>ID: ${item.id}</span></div>
+                        <div class="record-actions">
+                            <button class="btn" onclick='editItem(${JSON.stringify(item).replace(/'/g, "&#39;")})'>Edit</button>
+                            <button class="btn record-outline" onclick='showEmployeeRecords(${JSON.stringify(item).replace(/'/g, "&#39;")})'>Records</button>
+                        </div>
+                    </article>
+                `).join('');
+            } catch (error) {
+                tbody.innerHTML = `<p class="empty-state">Error loading data: ${error.message}</p>`;
+            }
+        }
+
+        function openModal() {
+            document.getElementById('form-modal').classList.add('active');
+            document.getElementById('modal-title').textContent = 'Add Employee';
+            document.getElementById('data-form').reset();
+            document.getElementById('item-id').value = '';
+        }
+
+        function closeModal() {
+            document.getElementById('form-modal').classList.remove('active');
+        }
+
+        function editItem(item) {
+            openModal();
+            document.getElementById('modal-title').textContent = 'Edit Employee';
+            document.getElementById('item-id').value = item.id;
+            document.getElementById('name').value = item.name;
+            document.getElementById('email').value = item.email;
+            document.getElementById('phone').value = item.phone || '';
+            document.getElementById('address').value = item.address || '';
+            document.getElementById('joined_at').value = item.joined_at ? item.joined_at.substring(0, 10) : '';
+        }
+
+        function showEmployeeRecords(item) {
+            const role = item.roles && item.roles[0] ? item.roles[0].name : 'employee';
+            document.getElementById('employee-record-details').innerHTML = `
+                <div class="employee-record-heading"><div class="record-avatar">●</div><div><strong>${item.name}</strong><span>${role}</span></div></div>
+                <dl><dt>Email</dt><dd>${item.email || 'Not recorded'}</dd><dt>Phone Number</dt><dd>${item.phone || 'Not recorded'}</dd><dt>Address</dt><dd>${item.address || 'Not recorded'}</dd><dt>Date Joined</dt><dd>${item.joined_at ? item.joined_at.substring(0, 10) : 'Not recorded'}</dd><dt>Employee ID</dt><dd>${item.id}</dd></dl>`;
+            document.getElementById('records-modal').classList.add('active');
+        }
+
+        function closeRecordsModal() {
+            document.getElementById('records-modal').classList.remove('active');
+        }
+
+        async function deleteItem(id) {
+            if(!confirm('Are you sure you want to delete this employee?')) return;
+            try {
+                await apiRequest(`${endpoint}/${id}`, 'DELETE');
+                loadData();
+            } catch(e) {
+                alert('Error deleting: ' + e.message);
+            }
+        }
+
+        document.getElementById('data-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('item-id').value;
+            const payload = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                address: document.getElementById('address').value,
+                joined_at: document.getElementById('joined_at').value || null,
+                role: 'driver'
+            };
+            const pwd = document.getElementById('password').value;
+            if (pwd) payload.password = pwd;
+
+            try {
+                if (id) {
+                    await apiRequest(`${endpoint}/${id}`, 'PUT', payload);
+                } else {
+                    if(!pwd) { alert('Password is required for new employee'); return; }
+                    await apiRequest(endpoint, 'POST', payload);
+                }
+                closeModal();
+                loadData();
+            } catch(e) {
+                alert('Error saving: ' + e.message);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

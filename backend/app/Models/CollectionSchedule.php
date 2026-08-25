@@ -12,14 +12,17 @@ class CollectionSchedule extends Model
 
     protected $fillable = [
         'barangay_id',
+        'date',
         'day',
         'pickup_time',
         'schedule_type',
         'notes',
         'active',
+        'status',
     ];
 
     protected $casts = [
+        'date' => 'date:Y-m-d',
         'active' => 'boolean',
     ];
 

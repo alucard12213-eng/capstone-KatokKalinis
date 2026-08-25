@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Truck Location Analytics - KatokKalinis</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .status-pill {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 12px;
+        }
+        .status-available { background: #2ecc71; }
+        .status-on_route { background: #3498db; }
+        .status-maintenance { background: #f39c12; }
+        .status-inactive { background: #95a5a6; }
+        .live-note { color: #7f8c8d; font-size: 13px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">KatokKalinis</div>
+            <div class="sidebar-role" id="sidebar-role"></div>
+            <nav class="sidebar-nav" id="sidebar-nav"></nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <h2>Truck Monitoring</h2>
+                <div id="topbar-user"></div>
+            </header>
+
+            <section class="content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Trucks</h3>
+                        <div class="value" id="stat-total-trucks">...</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Active Routes</h3>
+                        <div class="value" id="stat-active-routes">...</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Collections Today</h3>
+                        <div class="value" id="stat-collections-today">...</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Avg. Time</h3>
+                        <div class="value" id="stat-avg-time">...</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Fleet Status &amp; Last Known Location</h3>
+                        <button class="btn" onclick="openModal()" style="width: auto;">Add Truck</button>
+                    </div>
+                    <p class="live-note">Auto-refreshes every 15 seconds to reflect the latest reported truck positions.</p>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Truck #</th>
+                                <th>Plate</th>
+                                <th>Driver</th>
+                                <th>Contractor</th>
+                                <th>Status</th>
+                                <th>Last Location</th>
+                                <th>Last Update</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <tr><td colspan="8">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="form-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Add Truck</h3>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="data-form">
+                <input type="hidden" id="item-id">
+                <div class="form-group">
+                    <label>Truck Number</label>
+                    <input type="text" id="truck_number" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Plate Number</label>
+                    <input type="text" id="plate_number" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Driver</label>
+                    <select id="driver_id" class="form-control">
+                        <option value="">-- None --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Contractor</label>
+                    <select id="contractor_id" class="form-control">
+                        <option value="">-- None --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Truck Type</label>
+                    <input type="text" id="truck_type" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="status" class="form-control">
+                        <option value="available">Available</option>
+                        <option value="on_route">On Route</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Status Modal -->
+    <div id="status-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Update Truck Status</h3>
+                <span class="close-btn" onclick="closeStatusModal()">&times;</span>
+            </div>
+            <form id="status-form">
+                <input type="hidden" id="truck-id">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="status-select" class="form-control">
+                        <option value="available">Available</option>
+                        <option value="on_route">On Route</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn">Update Status</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        const endpoint = '/trucks';
+        let drivers = [];
+        let contractors = [];
+        let refreshTimer = null;
+
+        async function loadDropdowns() {
+            try {
+                const dRes = await apiRequest('/users?role=driver');
+                drivers = dRes.users || [];
+                const dSelect = document.getElementById('driver_id');
+                drivers.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.id;
+                    opt.textContent = `${d.name} (${d.email})`;
+                    dSelect.appendChild(opt);
+                });
+
+                const cRes = await apiRequest('/contractors');
+                contractors = cRes.data || [];
+                const cSelect = document.getElementById('contractor_id');
+                contractors.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.company_name;
+                    cSelect.appendChild(opt);
+                });
+            } catch (error) {
+                console.error('Failed to load dropdowns', error);
+            }
+        }
+
+        async function loadData() {
+            const tbody = document.getElementById('table-body');
+            try {
+                const res = await apiRequest(endpoint);
+                const data = res.trucks || [];
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8">No trucks found.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(item => {
+                    const loc = item.latest_location;
+                    const locText = loc ? `${loc.latitude}, ${loc.longitude}` : 'No data yet';
+                    const lastUpdate = loc ? loc.recorded_at.substring(0, 19).replace('T', ' ') : '-';
+                    return `
+                    <tr>
+                        <td>${item.truck_number}</td>
+                        <td>${item.plate_number}</td>
+                        <td>${(item.driver && item.driver.name) || '-'}</td>
+                        <td>${(item.contractor && item.contractor.company_name) || '-'}</td>
+                        <td><span class="status-pill status-${item.status}">${item.status}</span></td>
+                        <td>${locText}</td>
+                        <td>${lastUpdate}</td>
+                        <td>
+                            <button class="btn" style="padding: 5px 10px; width: auto; background: #3498db;" onclick="openStatusModal(${item.id}, '${item.status}')">Status</button>
+                            <button class="btn" style="padding: 5px 10px; width: auto; background: #f39c12;" onclick='editItem(${JSON.stringify(item).replace(/'/g, "&#39;")})'>Edit</button>
+                            <button class="btn" style="padding: 5px 10px; width: auto; background: #e74c3c;" onclick="deleteItem(${item.id})">Delete</button>
+                        </td>
+                    </tr>
+                `;}).join('');
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="8">Error loading data: ${error.message}</td></tr>`;
+            }
+        }
+
+        function timeDiffHours(start, end) {
+            if (!start || !end) return null;
+            const [sh, sm] = start.split(':').map(Number);
+            const [eh, em] = end.split(':').map(Number);
+            const minutes = (eh * 60 + em) - (sh * 60 + sm);
+            return minutes > 0 ? minutes / 60 : null;
+        }
+
+        async function loadStats() {
+            try {
+                const [trucksRes, routesRes] = await Promise.all([
+                    apiRequest(endpoint).catch(() => ({ trucks: [] })),
+                    apiRequest('/collection-routes').catch(() => ({ routes: [] })),
+                ]);
+
+                const trucks = trucksRes.trucks || [];
+                const routes = routesRes.routes || [];
+
+                document.getElementById('stat-total-trucks').textContent = trucks.length;
+                document.getElementById('stat-active-routes').textContent = trucks.filter(t => t.status === 'on_route').length;
+
+                const today = new Date().toISOString().substring(0, 10);
+                document.getElementById('stat-collections-today').textContent = routes.filter(r => (r.collection_date || '').substring(0, 10) === today).length;
+
+                const completed = routes.filter(r => r.status === 'completed' && r.start_time && r.end_time);
+                const durations = completed.map(r => timeDiffHours(r.start_time, r.end_time)).filter(d => d !== null);
+                const avg = durations.length ? (durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(1) : 'N/A';
+                document.getElementById('stat-avg-time').textContent = durations.length ? `${avg} hrs` : 'N/A';
+            } catch (error) {
+                console.error('Failed to load truck stats', error);
+            }
+        }
+
+        function openModal() {
+            document.getElementById('form-modal').classList.add('active');
+            document.getElementById('modal-title').textContent = 'Add Truck';
+            document.getElementById('data-form').reset();
+            document.getElementById('item-id').value = '';
+        }
+
+        function closeModal() {
+            document.getElementById('form-modal').classList.remove('active');
+        }
+
+        function editItem(item) {
+            openModal();
+            document.getElementById('modal-title').textContent = 'Edit Truck';
+            document.getElementById('item-id').value = item.id;
+            document.getElementById('truck_number').value = item.truck_number;
+            document.getElementById('plate_number').value = item.plate_number;
+            document.getElementById('driver_id').value = item.driver_id || '';
+            document.getElementById('contractor_id').value = item.contractor_id || '';
+            document.getElementById('truck_type').value = item.truck_type || '';
+            document.getElementById('status').value = item.status || 'available';
+        }
+
+        function openStatusModal(id, currentStatus) {
+            document.getElementById('status-modal').classList.add('active');
+            document.getElementById('truck-id').value = id;
+            document.getElementById('status-select').value = currentStatus;
+        }
+
+        function closeStatusModal() {
+            document.getElementById('status-modal').classList.remove('active');
+        }
+
+        async function deleteItem(id) {
+            if(!confirm('Are you sure you want to delete this truck?')) return;
+            try {
+                await apiRequest(`${endpoint}/${id}`, 'DELETE');
+                loadData();
+            } catch(e) {
+                alert('Error deleting: ' + e.message);
+            }
+        }
+
+        document.getElementById('data-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('item-id').value;
+            const payload = {
+                truck_number: document.getElementById('truck_number').value,
+                plate_number: document.getElementById('plate_number').value,
+                driver_id: document.getElementById('driver_id').value || null,
+                contractor_id: document.getElementById('contractor_id').value || null,
+                truck_type: document.getElementById('truck_type').value,
+                status: document.getElementById('status').value,
+            };
+
+            try {
+                if (id) {
+                    await apiRequest(`${endpoint}/${id}`, 'PUT', payload);
+                } else {
+                    await apiRequest(endpoint, 'POST', payload);
+                }
+                closeModal();
+                loadData();
+            } catch(e) {
+                alert('Error saving: ' + e.message);
+            }
+        });
+
+        document.getElementById('status-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('truck-id').value;
+            const status = document.getElementById('status-select').value;
+
+            try {
+                await apiRequest(`${endpoint}/${id}/status`, 'PUT', { status });
+                closeStatusModal();
+                loadData();
+            } catch(e) {
+                alert('Error updating: ' + e.message);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDropdowns();
+            loadData();
+            loadStats();
+            refreshTimer = setInterval(() => { loadData(); loadStats(); }, 15000);
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (refreshTimer) clearInterval(refreshTimer);
+        });
+    </script>
+</body>
+</html>

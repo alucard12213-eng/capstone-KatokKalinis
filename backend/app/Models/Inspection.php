@@ -19,6 +19,9 @@ class Inspection extends Model
         'compliance_level',
         'notes',
         'status',
+        'decision',
+        'decided_by',
+        'decided_at',
         'inspected_at',
     ];
 
@@ -28,6 +31,7 @@ class Inspection extends Model
         'total_score' => 'integer',
         'compliance_level' => 'integer',
         'inspected_at' => 'datetime',
+        'decided_at' => 'datetime',
     ];
 
     public function vendor(): BelongsTo

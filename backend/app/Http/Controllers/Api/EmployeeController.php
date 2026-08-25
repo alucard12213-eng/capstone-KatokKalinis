@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -16,7 +17,7 @@ class EmployeeController extends Controller
     public function index()
     {
         $employees = User::whereHas('roles', function ($query) {
-            $query->where('name', 'employee');
+            $query->where('name', 'driver');
         })
         ->with('roles')
         ->orderBy('id', 'desc')
@@ -36,6 +37,9 @@ class EmployeeController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
+            'phone' => 'nullable|string|max:30',
+            'address' => 'nullable|string|max:255',
+            'joined_at' => 'nullable|date',
             'password' => 'required|string|min:6',
         ]);
 
@@ -50,16 +54,25 @@ class EmployeeController extends Controller
         $employee = User::create([
             'name' => $request->name,
             'email' => $request->email,
+            'phone' => $request->phone,
+            'address' => $request->address,
+            'joined_at' => $request->joined_at ?? now()->toDateString(),
             'password' => Hash::make($request->password),
         ]);
 
-        $employeeRole = \App\Models\Role::where('name', 'employee')->first();
+        $employeeRole = \App\Models\Role::where('name', 'driver')->first();
 
         if ($employeeRole) {
             $employee->roles()->attach($employeeRole->id);
         }
 
         $employee->load('roles');
+
+        ActivityLog::record(
+            'employee.created',
+            "Added employee {$employee->name} ({$employee->email}).",
+            $employee
+        );
 
         return response()->json([
             'success' => true,
@@ -74,7 +87,7 @@ class EmployeeController extends Controller
     public function show($id)
     {
         $employee = User::whereHas('roles', function ($query) {
-            $query->where('name', 'employee');
+            $query->where('name', 'driver');
         })
         ->with('roles')
         ->find($id);
@@ -98,7 +111,7 @@ class EmployeeController extends Controller
     public function update(Request $request, $id)
     {
         $employee = User::whereHas('roles', function ($query) {
-            $query->where('name', 'employee');
+            $query->where('name', 'driver');
         })
         ->find($id);
 
@@ -112,6 +125,9 @@ class EmployeeController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|email|unique:users,email,' . $id,
+            'phone' => 'nullable|string|max:30',
+            'address' => 'nullable|string|max:255',
+            'joined_at' => 'nullable|date',
             'password' => 'sometimes|nullable|string|min:6',
         ]);
 
@@ -131,6 +147,12 @@ class EmployeeController extends Controller
             $employee->email = $request->email;
         }
 
+        foreach (['phone', 'address', 'joined_at'] as $field) {
+            if ($request->has($field)) {
+                $employee->{$field} = $request->{$field};
+            }
+        }
+
         if ($request->filled('password')) {
             $employee->password = Hash::make($request->password);
         }
@@ -138,6 +160,12 @@ class EmployeeController extends Controller
         $employee->save();
 
         $employee->load('roles');
+
+        ActivityLog::record(
+            'employee.updated',
+            "Updated employee {$employee->name} ({$employee->email}).",
+            $employee
+        );
 
         return response()->json([
             'success' => true,
@@ -165,7 +193,15 @@ class EmployeeController extends Controller
 
         $employee->roles()->detach();
 
+        $name = $employee->name;
+        $email = $employee->email;
+
         $employee->delete();
+
+        ActivityLog::record(
+            'employee.deleted',
+            "Deleted employee {$name} ({$email})."
+        );
 
         return response()->json([
             'success' => true,

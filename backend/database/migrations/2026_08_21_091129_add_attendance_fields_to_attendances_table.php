@@ -11,41 +11,34 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('attendances', 'user_id')
+            && Schema::hasColumn('attendances', 'date')
+            && Schema::hasColumn('attendances', 'time_in')
+            && Schema::hasColumn('attendances', 'time_out')
+            && Schema::hasColumn('attendances', 'status')
+            && Schema::hasColumn('attendances', 'remarks')) {
+            return;
+        }
+
         Schema::table('attendances', function (Blueprint $table) {
-
-            $table->foreignId('user_id')
-                ->after('id')
-                ->constrained('users')
-                ->cascadeOnDelete();
-
-            $table->date('date')
-                ->after('user_id');
-
-            $table->time('time_in')
-                ->nullable()
-                ->after('date');
-
-            $table->time('time_out')
-                ->nullable()
-                ->after('time_in');
-
-            $table->enum('status', [
-                'present',
-                'late',
-                'absent',
-                'on_leave',
-            ])
-                ->default('present')
-                ->after('time_out');
-
-            $table->text('remarks')
-                ->nullable()
-                ->after('status');
-
-            $table->unique(
-                ['user_id', 'date'],
-                'attendances_user_id_date_unique'
-            );
+            if (!Schema::hasColumn('attendances', 'user_id')) {
+                $table->foreignId('user_id')->after('id')->constrained('users')->cascadeOnDelete();
+            }
+            if (!Schema::hasColumn('attendances', 'date')) {
+                $table->date('date')->after('user_id');
+            }
+            if (!Schema::hasColumn('attendances', 'time_in')) {
+                $table->time('time_in')->nullable()->after('date');
+            }
+            if (!Schema::hasColumn('attendances', 'time_out')) {
+                $table->time('time_out')->nullable()->after('time_in');
+            }
+            if (!Schema::hasColumn('attendances', 'status')) {
+                $table->enum('status', ['present', 'late', 'absent', 'on_leave'])->default('present')->after('time_out');
+            }
+            if (!Schema::hasColumn('attendances', 'remarks')) {
+                $table->text('remarks')->nullable()->after('status');
+            }
         });
     }
 
