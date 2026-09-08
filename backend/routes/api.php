@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\TruckLocationController;
 use App\Http\Controllers\Api\CollectionRouteController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\AnalyticsController;
+use App\Http\Controllers\Api\ClenroPileupReportController;
 
 use App\Http\Middleware\SuperAdminMiddleware;
 
@@ -256,6 +257,26 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
 });
+
+
+/*
+|--------------------------------------------------------------------------
+| CLENRO HISTORICAL GARBAGE PILE-UP DECISION SUPPORT
+| (Barangay 1 to 40, Cogon Market, Carmen Market - Cagayan de Oro City)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/clenro/pileup-reports', [ClenroPileupReportController::class, 'index']);
+    Route::get('/clenro/pileup-reports/{id}', [ClenroPileupReportController::class, 'show']);
+    Route::get('/clenro/pileup-reports-analytics', [ClenroPileupReportController::class, 'analytics']);
+    Route::get('/clenro/pileup-reports-export', [ClenroPileupReportController::class, 'exportCsv']);
+});
+
+// Demo / Local preview access without Sanctum token
+Route::get('/public/clenro/pileup-reports', [ClenroPileupReportController::class, 'index']);
+Route::get('/public/clenro/pileup-reports-analytics', [ClenroPileupReportController::class, 'analytics']);
+Route::get('/public/clenro/pileup-reports-export', [ClenroPileupReportController::class, 'exportCsv']);
 
 
 /*
