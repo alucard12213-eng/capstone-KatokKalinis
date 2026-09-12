@@ -256,6 +256,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
+    Route::get('/analytics/barangay-stats', [AnalyticsController::class, 'barangayAnalytics']);
 });
 
 

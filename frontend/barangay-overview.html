@@ -87,6 +87,18 @@
 
     <script src="js/app.js"></script>
     <script>
+        // Read URL params: ?barangay=<id>&name=<name>
+        const urlParams   = new URLSearchParams(window.location.search);
+        const barangayId  = urlParams.get('barangay');
+        const barangayName = urlParams.get('name') ? decodeURIComponent(urlParams.get('name')) : null;
+
+        // Update page title and header dynamically
+        if (barangayName) {
+            document.title = `${barangayName} - KatokKalinis`;
+            const h2 = document.querySelector('.topbar h2');
+            if (h2) h2.textContent = barangayName;
+        }
+
         function timeDiffHours(start, end) {
             if (!start || !end) return null;
             const [sh, sm] = start.split(':').map(Number);
@@ -97,30 +109,33 @@
 
         async function loadOverview() {
             try {
+                // Build query suffix for barangay filter
+                const brgyQ = barangayId ? `&barangay_id=${barangayId}` : '';
+
                 const [residentsRes, vendorsRes, routesRes, reportsRes] = await Promise.all([
                     apiRequest('/users?role=resident').catch(() => ({ users: [] })),
-                    apiRequest('/vendors').catch(() => ({ vendors: [] })),
-                    apiRequest('/collection-routes').catch(() => ({ routes: [] })),
-                    apiRequest('/reports').catch(() => ({ reports: [] })),
+                    apiRequest(`/vendors${barangayId ? `?barangay_id=${barangayId}` : ''}`).catch(() => ({ vendors: [] })),
+                    apiRequest(`/collection-routes${barangayId ? `?barangay_id=${barangayId}` : ''}`).catch(() => ({ routes: [] })),
+                    apiRequest(`/reports${barangayId ? `?barangay_id=${barangayId}` : ''}`).catch(() => ({ reports: [] })),
                 ]);
 
                 const residents = residentsRes.users || [];
-                const vendors = vendorsRes.vendors || [];
-                const routes = routesRes.routes || [];
-                const reports = reportsRes.reports || [];
+                const vendors   = vendorsRes.vendors || [];
+                const routes    = routesRes.routes || [];
+                const reports   = reportsRes.reports || [];
 
                 document.getElementById('stat-residents').textContent = residents.length;
-                document.getElementById('stat-vendors').textContent = vendors.length;
+                document.getElementById('stat-vendors').textContent   = vendors.length;
 
                 // "This week" = collection routes within the last 7 days.
-                const now = new Date();
+                const now     = new Date();
                 const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                 const weeklyRoutes = routes.filter(r => new Date(r.collection_date) >= weekAgo);
                 document.getElementById('stat-collections').textContent = weeklyRoutes.length;
 
                 const completedWithTimes = routes.filter(r => r.status === 'completed' && r.start_time && r.end_time);
                 const durations = completedWithTimes.map(r => timeDiffHours(r.start_time, r.end_time)).filter(d => d !== null);
-                const avgHours = durations.length ? (durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(1) : 'N/A';
+                const avgHours  = durations.length ? (durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(1) : 'N/A';
                 document.getElementById('stat-avg-time').textContent = durations.length ? `${avgHours} hrs` : 'N/A';
 
                 // Recent collections (latest 5)
@@ -131,7 +146,7 @@
                     recentContainer.innerHTML = routes.slice(0, 5).map(r => `
                         <div class="list-item">
                             <div>
-                                <strong>${(r.barangay && r.barangay.name) || 'Unknown Barangay'}</strong><br>
+                                <strong>${(r.barangay && r.barangay.name) || barangayName || 'Unknown Barangay'}</strong><br>
                                 <span class="meta">Truck ${(r.truck && r.truck.truck_number) || '-'} &middot; ${r.collection_date ? r.collection_date.substring(0, 10) : '-'}</span>
                             </div>
                             <span class="pill pill-${r.status === 'completed' ? 'green' : (r.status === 'cancelled' ? 'red' : 'blue')}">${r.status}</span>
@@ -141,7 +156,7 @@
 
                 // Active issues (pending / reviewed reports)
                 const activeContainer = document.getElementById('active-issues');
-                const activeReports = reports.filter(r => r.status === 'pending' || r.status === 'reviewed');
+                const activeReports   = reports.filter(r => r.status === 'pending' || r.status === 'reviewed');
                 if (activeReports.length === 0) {
                     activeContainer.innerHTML = '<p>No active issues right now.</p>';
                 } else {
@@ -149,7 +164,7 @@
                         <div class="list-item">
                             <div>
                                 <strong>${r.title || 'Untitled report'}</strong><br>
-                                <span class="meta">${(r.barangay && r.barangay.name) || '-'} &middot; ${(r.user && r.user.name) || 'Anonymous'}</span>
+                                <span class="meta">${(r.barangay && r.barangay.name) || barangayName || '-'} &middot; ${(r.user && r.user.name) || 'Anonymous'}</span>
                             </div>
                             <span class="pill pill-${r.status === 'pending' ? 'orange' : 'blue'}">${r.status}</span>
                         </div>
